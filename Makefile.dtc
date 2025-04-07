@@ -10,6 +10,7 @@ DTC_SRCS = \
 	dtc.c \
 	flattree.c \
 	fstree.c \
+	hashtable.c \
 	livetree.c \
 	srcpos.c \
 	treesource.c \
