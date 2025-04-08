@@ -223,16 +223,9 @@ struct stringtable {
 	struct data data;
 };
 
-static const char *stringtable_tokey(void *ctx, const void *value)
-{
-	struct stringtable *strtab = ctx;
-
-	return &strtab->data.val[(intptr_t)value];
-}
-
 static void stringtable_init(struct stringtable *strtab)
 {
-	hashtable_init(&strtab->table, stringtable_tokey, strtab);
+	hashtable_init(&strtab->table);
 	strtab->data = empty_data;
 }
 
