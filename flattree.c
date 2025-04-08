@@ -218,23 +218,64 @@ static struct emitter asm_emitter = {
 	.property = asm_emit_property,
 };
 
-static int stringtable_insert(struct data *d, const char *str)
+struct stringtable {
+	struct hashtable table;
+	struct data data;
+};
+
+static const char *stringtable_tokey(void *ctx, const void *value)
 {
-	unsigned int i;
+	struct stringtable *strtab = ctx;
 
-	/* FIXME: do this more efficiently? */
+	return &strtab->data.val[(intptr_t)value];
+}
 
-	for (i = 0; i < d->len; i++) {
-		if (streq(str, d->val + i))
-			return i;
+static void stringtable_init(struct stringtable *strtab)
+{
+	hashtable_init(&strtab->table, stringtable_tokey, strtab);
+	strtab->data = empty_data;
+}
+
+static struct data stringtable_data(struct stringtable *strtab)
+{
+	hashtable_free(&strtab->table);
+
+	return strtab->data;
+}
+
+static void stringtable_free(struct stringtable *strtab)
+{
+	data_free(stringtable_data(strtab));
+}
+
+static int stringtable_insert(struct stringtable *strtab, const char *str)
+{
+	const void *offset;
+	const char *dup;
+	size_t len;
+
+	offset = hashtable_get(&strtab->table, str);
+	if (offset)
+		return (intptr_t)offset;
+
+	len = strlen(str);
+
+	/* Try to match a subsequence among existing strings */
+	dup = memmem(strtab->data.val, strtab->data.len, str, len + 1);
+	if (!dup) {
+		offset = (void *)(intptr_t)strtab->data.len;
+		strtab->data = data_append_data(strtab->data, str, len + 1);
+	} else {
+		offset = (void *)(dup - strtab->data.val);
 	}
 
-	*d = data_append_data(*d, str, strlen(str)+1);
-	return i;
+	hashtable_set(&strtab->table, str, offset);
+
+	return (intptr_t)offset;
 }
 
 static void flatten_tree(struct node *tree, struct emitter *emit,
-			 void *etarget, struct data *strbuf,
+			 void *etarget, struct stringtable *strbuf,
 			 struct version_info *vi)
 {
 	struct property *prop;
@@ -350,9 +391,11 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 	struct data blob       = empty_data;
 	struct data reservebuf = empty_data;
 	struct data dtbuf      = empty_data;
-	struct data strbuf     = empty_data;
+	struct stringtable strbuf;
 	struct fdt_header fdt;
 	int padlen = 0;
+
+	stringtable_init(&strbuf);
 
 	for (i = 0; i < ARRAY_SIZE(version_table); i++) {
 		if (version_table[i].version == version)
@@ -367,7 +410,7 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 	reservebuf = flatten_reserve_list(dti->reservelist, vi);
 
 	/* Make header */
-	make_fdt_header(&fdt, vi, reservebuf.len, dtbuf.len, strbuf.len,
+	make_fdt_header(&fdt, vi, reservebuf.len, dtbuf.len, strbuf.data.len,
 			dti->boot_cpuid_phys);
 
 	/*
@@ -407,7 +450,7 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 	blob = data_merge(blob, reservebuf);
 	blob = data_append_zeroes(blob, sizeof(struct fdt_reserve_entry));
 	blob = data_merge(blob, dtbuf);
-	blob = data_merge(blob, strbuf);
+	blob = data_merge(blob, stringtable_data(&strbuf));
 
 	/*
 	 * If the user asked for more space than is used, pad out the blob.
@@ -448,9 +491,11 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 {
 	struct version_info *vi = NULL;
 	unsigned int i;
-	struct data strbuf = empty_data;
+	struct stringtable strbuf;
 	struct reserve_info *re;
 	const char *symprefix = "dt";
+
+	stringtable_init(&strbuf);
 
 	for (i = 0; i < ARRAY_SIZE(version_table); i++) {
 		if (version_table[i].version == version)
@@ -541,7 +586,7 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 	emit_label(f, symprefix, "struct_end");
 
 	emit_label(f, symprefix, "strings_start");
-	dump_stringtable_asm(f, strbuf);
+	dump_stringtable_asm(f, strbuf.data);
 	emit_label(f, symprefix, "strings_end");
 
 	emit_label(f, symprefix, "blob_end");
@@ -560,7 +605,7 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 		asm_emit_align(f, alignsize);
 	emit_label(f, symprefix, "blob_abs_end");
 
-	data_free(strbuf);
+	stringtable_free(&strbuf);
 }
 
 struct inbuf {
