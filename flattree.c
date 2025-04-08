@@ -243,8 +243,8 @@ static void stringtable_free(struct stringtable *strtab)
 
 static int stringtable_insert(struct stringtable *strtab, const char *str)
 {
-	const void *offset;
 	const char *dup;
+	void *offset;
 	size_t len;
 
 	offset = hashtable_get(&strtab->table, str);
