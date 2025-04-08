@@ -190,7 +190,7 @@ bool data_is_one_string(struct data d);
 /* Hashtable */
 struct hashtable_slot {
 	const char *key;
-	const char *value;
+	void *value;
 };
 struct hashtable {
 	unsigned int cap, len;
@@ -199,8 +199,8 @@ struct hashtable {
 
 void hashtable_init(struct hashtable *table);
 void hashtable_free(struct hashtable *table);
-void hashtable_set(struct hashtable *table, const char *key, const void *value);
-const void *hashtable_get(struct hashtable *table, const char *key);
+void hashtable_set(struct hashtable *table, const char *key, void *value);
+void *hashtable_get(struct hashtable *table, const char *key);
 
 /* DT constraints */
 

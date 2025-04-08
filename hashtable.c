@@ -84,7 +84,7 @@ static void hashtable_grow(struct hashtable *table)
 	table->slots	= newslots;
 }
 
-void hashtable_set(struct hashtable *table, const char *key, const void *value)
+void hashtable_set(struct hashtable *table, const char *key, void *value)
 {
 	unsigned int hash, i;
 	size_t len;
@@ -104,7 +104,7 @@ void hashtable_set(struct hashtable *table, const char *key, const void *value)
 	table->len++;
 }
 
-const void *hashtable_get(struct hashtable *table, const char *key)
+void *hashtable_get(struct hashtable *table, const char *key)
 {
 	struct hashtable_slot *slot;
 	unsigned int hash, i, mask;
