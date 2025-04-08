@@ -188,15 +188,16 @@ struct data data_add_marker(struct data d, enum markertype type, char *ref);
 bool data_is_one_string(struct data d);
 
 /* Hashtable */
-typedef const char *(*hashtable_tokey)(void *ctx, const void *value);
+struct hashtable_slot {
+	const char *key;
+	const char *value;
+};
 struct hashtable {
-	hashtable_tokey tokey;
-	void *ctx;
 	unsigned int cap, len;
-	const void **slots;
+	struct hashtable_slot *slots;
 };
 
-void hashtable_init(struct hashtable *table, hashtable_tokey tokey, void *ctx);
+void hashtable_init(struct hashtable *table);
 void hashtable_free(struct hashtable *table);
 void hashtable_set(struct hashtable *table, const char *key, const void *value);
 const void *hashtable_get(struct hashtable *table, const char *key);

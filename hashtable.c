@@ -24,17 +24,17 @@ static unsigned int hashtable_hash(const char *str, size_t len)
  */
 #define hashtable_initcap	256
 
-void hashtable_init(struct hashtable *table, hashtable_tokey tokey, void *ctx)
+void hashtable_init(struct hashtable *table)
 {
+	size_t size = sizeof(struct hashtable_slot) * hashtable_initcap;
+
 	*table = (struct hashtable) {
-		.tokey	= tokey,
-		.ctx	= ctx,
 		.len	= 0,
 		.cap	= hashtable_initcap,
-		.slots	= xmalloc(sizeof(void *) * hashtable_initcap),
+		.slots	= xmalloc(size),
 	};
 
-	memset(table->slots, 0, sizeof(void *) * hashtable_initcap);
+	memset(table->slots, 0, size);
 }
 
 void hashtable_free(struct hashtable *table)
@@ -43,14 +43,14 @@ void hashtable_free(struct hashtable *table)
 	table->slots = NULL;
 }
 
-static unsigned int hashtable_findslot(const void **slots, unsigned int cap,
-				       unsigned int hash)
+static unsigned int hashtable_findslot(struct hashtable_slot *slots,
+				       unsigned int cap, unsigned int hash)
 {
 	unsigned i, mask;
 
 	mask = cap - 1;
 
-	for (i = hash & mask; slots[i]; i = (i + 1) & mask) ;
+	for (i = hash & mask; slots[i].key; i = (i + 1) & mask) ;
 
 	return i;
 }
@@ -58,25 +58,26 @@ static unsigned int hashtable_findslot(const void **slots, unsigned int cap,
 static void hashtable_grow(struct hashtable *table)
 {
 	unsigned int newcap = table->cap * 2;
-	const void **newslots = xmalloc(sizeof(void *) * newcap);
+	size_t newsize = sizeof(struct hashtable_slot) * newcap;
+	struct hashtable_slot *newslots = xmalloc(newsize);
 	unsigned int i;
 
-	memset(newslots, 0, sizeof(void *) * newcap);
+	memset(newslots, 0, newsize);
 
 	for (i = 0; i < table->cap; i++) {
+		struct hashtable_slot *slot;
 		unsigned hash, newslot;
-		const void *value;
 		const char *key;
 
-		value = table->slots[i];
-		if (!value)
+		slot = &table->slots[i];
+		key = slot->key;
+		if (!key)
 			continue;
 
-		key = table->tokey(table->ctx, value);
 		hash = hashtable_hash(key, strlen(key));
 		newslot = hashtable_findslot(newslots, newcap, hash);
 
-		newslots[newslot] = value;
+		newslots[newslot] = *slot;
 	}
 
 	table->cap	= newcap;
@@ -95,24 +96,29 @@ void hashtable_set(struct hashtable *table, const char *key, const void *value)
 	hash	= hashtable_hash(key, len);
 
 	i = hashtable_findslot(table->slots, table->cap, hash);
-	table->slots[i] = value;
+	table->slots[i] = (struct hashtable_slot) {
+		.key	= key,
+		.value	= value,
+	};
 
 	table->len++;
 }
 
 const void *hashtable_get(struct hashtable *table, const char *key)
 {
+	struct hashtable_slot *slot;
 	unsigned int hash, i, mask;
-	const void *value;
 	size_t len;
 
 	len	= strlen(key);
 	mask	= table->cap - 1;
 	hash	= hashtable_hash(key, len);
 
-	for (i = hash & mask; (value = table->slots[i]); i = (i + 1) & mask) {
-		if (streq(key, table->tokey(table->ctx, value)))
-			return value;
+	for (i = hash & mask;
+	     (slot = &table->slots[i])->key;
+	     i = (i + 1) & mask) {
+		if (streq(key, slot->key))
+			return slot->value;
 	}
 
 	return NULL;
