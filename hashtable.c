@@ -104,7 +104,8 @@ void hashtable_append(struct hashtable *table, const char *key, void *value)
 	table->len++;
 }
 
-void *hashtable_get(struct hashtable *table, const char *key)
+static struct hashtable_slot *hashtable_search(struct hashtable *table,
+					       const char *key)
 {
 	struct hashtable_slot *slot;
 	unsigned int hash, i, mask;
@@ -118,8 +119,23 @@ void *hashtable_get(struct hashtable *table, const char *key)
 	     (slot = &table->slots[i])->key;
 	     i = (i + 1) & mask) {
 		if (streq(key, slot->key))
-			return slot->value;
+			return slot;
 	}
 
 	return NULL;
+}
+
+void *hashtable_get(struct hashtable *table, const char *key)
+{
+	struct hashtable_slot *slot = hashtable_search(table, key);
+
+	return slot ? slot->value : NULL;
+}
+
+void hashtable_set(struct hashtable *table, const char *key, void *value)
+{
+	struct hashtable_slot *slot = hashtable_search(table, key);
+
+	if (slot)
+		slot->value = value;
 }

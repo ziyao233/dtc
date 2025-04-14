@@ -201,6 +201,7 @@ void hashtable_init(struct hashtable *table);
 void hashtable_free(struct hashtable *table);
 void hashtable_append(struct hashtable *table, const char *key, void *value);
 void *hashtable_get(struct hashtable *table, const char *key);
+void hashtable_set(struct hashtable *table, const char *key, void *value);
 
 /* DT constraints */
 
