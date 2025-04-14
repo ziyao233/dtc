@@ -262,7 +262,7 @@ static int stringtable_insert(struct stringtable *strtab, const char *str)
 		offset = (void *)(dup - strtab->data.val);
 	}
 
-	hashtable_set(&strtab->table, str, offset);
+	hashtable_append(&strtab->table, str, offset);
 
 	return (intptr_t)offset;
 }

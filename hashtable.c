@@ -84,7 +84,7 @@ static void hashtable_grow(struct hashtable *table)
 	table->slots	= newslots;
 }
 
-void hashtable_set(struct hashtable *table, const char *key, void *value)
+void hashtable_append(struct hashtable *table, const char *key, void *value)
 {
 	unsigned int hash, i;
 	size_t len;
