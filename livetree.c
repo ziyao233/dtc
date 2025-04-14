@@ -30,6 +30,9 @@ void add_label(struct label **labels, char *label)
 
 void node_add_label(struct node *node, char *label)
 {
+	if (!hashtable_get(&dt_label_to_node, label))
+		hashtable_append(&dt_label_to_node, label, node);
+
 	add_label(&node->labels, label);
 }
 
@@ -153,8 +156,12 @@ struct node *merge_nodes(struct node *old_node, struct node *new_node)
 	old_node->deleted = 0;
 
 	/* Add new node labels to old node */
-	for_each_label_withdel(new_node->labels, l)
+	for_each_label_withdel(new_node->labels, l) {
 		add_label(&old_node->labels, l->label);
+
+		if (hashtable_get(&dt_label_to_node, l->label) == new_node)
+			hashtable_set(&dt_label_to_node, l->label, old_node);
+	}
 
 	/* Move properties from the new node to the old node.  If there
 	 * is a collision, replace the old value with the new */
@@ -541,12 +548,11 @@ struct node *get_node_by_path(struct node *tree, const char *path)
 	return NULL;
 }
 
-struct node *get_node_by_label(struct node *tree, const char *label)
+static struct node *get_node_by_label_recursive(struct node *tree,
+						const char *label)
 {
 	struct node *child, *node;
 	struct label *l;
-
-	assert(label && (strlen(label) > 0));
 
 	for_each_label(tree->labels, l)
 		if (streq(l->label, label))
@@ -559,6 +565,22 @@ struct node *get_node_by_label(struct node *tree, const char *label)
 	}
 
 	return NULL;
+}
+
+struct node *get_node_by_label(struct node *tree, const char *label)
+{
+	struct label *l;
+
+	assert(label && (strlen(label) > 0));
+
+	struct node *node = hashtable_get(&dt_label_to_node, label);
+	if (node && !node->deleted) {
+		for_each_label(node->labels, l)
+			if (streq(l->label, label))
+				return node;
+	}
+
+	return get_node_by_label_recursive(tree, label);
 }
 
 struct node *get_node_by_phandle(struct node *tree, cell_t phandle)

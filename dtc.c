@@ -23,6 +23,8 @@ int auto_label_aliases;		/* auto generate labels -> aliases */
 int annotate;		/* Level of annotation: 1 for input source location
 			   >1 for full input source location. */
 
+struct hashtable dt_label_to_node;
+
 static int is_power_of_2(int x)
 {
 	return (x > 0) && ((x & (x - 1)) == 0);
@@ -293,6 +295,8 @@ int main(int argc, char *argv[])
 		fprint_path_escaped(depfile, outname);
 		fputc(':', depfile);
 	}
+
+	hashtable_init(&dt_label_to_node);
 
 	if (inform == NULL)
 		inform = guess_input_format(arg, "dts");

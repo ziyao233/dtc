@@ -45,6 +45,8 @@ extern int generate_fixups;	/* generate fixups */
 extern int auto_label_aliases;	/* auto generate labels -> aliases */
 extern int annotate;		/* annotate .dts with input source location */
 
+extern struct hashtable dt_label_to_node;
+
 #define PHANDLE_LEGACY	0x1
 #define PHANDLE_EPAPR	0x2
 #define PHANDLE_BOTH	0x3
