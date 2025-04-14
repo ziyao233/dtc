@@ -28,6 +28,11 @@ void add_label(struct label **labels, char *label)
 	*labels = new;
 }
 
+void node_add_label(struct node *node, char *label)
+{
+	add_label(&node->labels, label);
+}
+
 void delete_labels(struct label **labels)
 {
 	struct label *label;

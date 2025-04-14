@@ -190,7 +190,7 @@ devicetree:
 				ERROR(&@2, "Label-relative reference %s not supported in plugin", $3);
 
 			if (target) {
-				add_label(&target->labels, $2);
+				node_add_label(target, $2);
 				merge_nodes(target, $4);
 			} else
 				ERROR(&@3, "Label or path %s not found", $3);
@@ -586,7 +586,7 @@ subnode:
 		}
 	| DT_LABEL subnode
 		{
-			add_label(&$2->labels, $1);
+			node_add_label($2, $1);
 			$$ = $2;
 		}
 	;

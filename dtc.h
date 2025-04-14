@@ -275,6 +275,7 @@ struct node {
 
 void add_label(struct label **labels, char *label);
 void delete_labels(struct label **labels);
+void node_add_label(struct node *node, char *label);
 
 struct property *build_property(const char *name, struct data val,
 				struct srcpos *srcpos);
